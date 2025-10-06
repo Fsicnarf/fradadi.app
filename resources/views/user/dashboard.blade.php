@@ -64,15 +64,15 @@
         <div class="grid">
           <div>
             <label>DNI</label>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <input type="text" name="dni" id="dni" maxlength="20" placeholder="Documento" />
-              <button class="btn" type="button" id="dniFillBtn" title="Autorrellenar por DNI">Autorrellenar</button>
-            </div>
-            <div id="dniStatus" style="font-size:12px; color:#475569; margin-top:4px;"></div>
+            <input type="text" name="dni" id="dni" maxlength="20" placeholder="Documento" />
           </div>
           <div>
-            <label>Nombre</label>
-            <input type="text" name="patient_name" id="patient_name" placeholder="Nombre y apellidos" />
+            <label>Nombres</label>
+            <input type="text" name="patient_first_name" id="patient_first_name" placeholder="Nombres" />
+          </div>
+          <div>
+            <label>Apellidos</label>
+            <input type="text" name="patient_last_name" id="patient_last_name" placeholder="Apellidos" />
           </div>
           <div>
             <label>Edad</label>
@@ -233,9 +233,8 @@
       const cancelBtn = document.getElementById('cancelBtn');
       const form = document.getElementById('apptForm');
       const dniInput = document.getElementById('dni');
-      const dniFillBtn = document.getElementById('dniFillBtn');
-      const dniStatus = document.getElementById('dniStatus');
-      const nameInput = document.getElementById('patient_name');
+      const firstNameInput = document.getElementById('patient_first_name');
+      const lastNameInput = document.getElementById('patient_last_name');
       const ageInput = document.getElementById('patient_age');
       const phoneInput = document.getElementById('phone');
       let editingId = null;
@@ -251,6 +250,10 @@
         const channelSel = document.getElementById('channel');
         if (channelSel) channelSel.value = 'SMS';
         if (phoneInput) phoneInput.value = '';
+        if (dniInput) dniInput.value = '';
+        if (firstNameInput) firstNameInput.value = '';
+        if (lastNameInput) lastNameInput.value = '';
+        if (ageInput) ageInput.value = '';
         modal.classList.add('show');
         editingId = null;
         document.body.classList.add('modal-open');
@@ -261,47 +264,7 @@
       // Evitar que los clics dentro de la tarjeta se propaguen al backdrop
       modal.querySelector('.card').addEventListener('click', (e) => e.stopPropagation());
 
-      // Lookup por DNI para auto-rellenar nombre/edad desde registros previos del propio usuario
-      let dniTimer = null;
-      dniInput.addEventListener('input', () => {
-        clearTimeout(dniTimer);
-        const v = dniInput.value.trim();
-        if (!v) { return; }
-        dniTimer = setTimeout(async () => {
-          try {
-            const url = new URL('{{ route('appointments.patient') }}', window.location.origin);
-            url.searchParams.set('dni', v);
-            const resp = await fetch(url.toString());
-            if (!resp.ok) return;
-            const data = await resp.json();
-            if (data && (data.patient_name || data.patient_age)) {
-              if (data.patient_name) nameInput.value = data.patient_name;
-              if (data.patient_age !== undefined && data.patient_age !== null) ageInput.value = data.patient_age;
-              if (dniStatus) { dniStatus.style.color = '#166534'; dniStatus.textContent = 'Datos completados a partir de historial/API.'; }
-            } else {
-              if (dniStatus) { dniStatus.style.color = '#991b1b'; dniStatus.textContent = 'No se encontraron datos para este DNI.'; }
-            }
-          } catch(e) { /* silent */ }
-        }, 400);
-      });
-      dniFillBtn.addEventListener('click', async () => {
-        const v = dniInput.value.trim();
-        if (!v) { dniInput.focus(); return; }
-        try {
-          const url = new URL('{{ route('appointments.patient') }}', window.location.origin);
-          url.searchParams.set('dni', v);
-          const resp = await fetch(url.toString());
-          if (!resp.ok) return;
-          const data = await resp.json();
-          if (data && (data.patient_name || data.patient_age)) {
-            if (data.patient_name) nameInput.value = data.patient_name;
-            if (data.patient_age !== undefined && data.patient_age !== null) ageInput.value = data.patient_age;
-            if (dniStatus) { dniStatus.style.color = '#166534'; dniStatus.textContent = 'Datos completados.'; }
-          } else {
-            if (dniStatus) { dniStatus.style.color = '#991b1b'; dniStatus.textContent = 'No se encontraron datos para este DNI.'; }
-          }
-        } catch(e) { /* silent */ }
-      });
+      // Eliminado: autorrelleno por DNI y llamadas a API.
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -348,7 +311,16 @@
         const notesEl = document.getElementById('notes');
         if (notesEl) notesEl.value = ev.extendedProps.notes || '';
         if (dniInput) dniInput.value = ev.extendedProps.dni || '';
-        if (nameInput) nameInput.value = ev.extendedProps.patient_name || '';
+        // Split patient_name into first/last best-effort
+        const full = ev.extendedProps.patient_name || '';
+        if (full && (firstNameInput || lastNameInput)) {
+          const parts = full.trim().split(/\s+/);
+          if (firstNameInput) firstNameInput.value = parts.slice(0, Math.max(1, Math.ceil(parts.length/2))).join(' ');
+          if (lastNameInput) lastNameInput.value = parts.slice(Math.max(1, Math.ceil(parts.length/2))).join(' ');
+        } else {
+          if (firstNameInput) firstNameInput.value = '';
+          if (lastNameInput) lastNameInput.value = '';
+        }
         if (ageInput) ageInput.value = ev.extendedProps.patient_age ?? '';
         if (phoneInput) phoneInput.value = ev.extendedProps.phone || '';
         modal.classList.add('show');

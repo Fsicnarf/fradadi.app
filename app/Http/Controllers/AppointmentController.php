@@ -6,7 +6,6 @@ use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Http;
 
 class AppointmentController extends Controller
 {
@@ -53,6 +52,8 @@ class AppointmentController extends Controller
             'notes' => ['nullable','string','max:1000'],
             'dni' => ['nullable','string','max:20'],
             'patient_name' => ['nullable','string','max:255'],
+            'patient_first_name' => ['required','string','max:255'],
+            'patient_last_name' => ['required','string','max:255'],
             'patient_age' => ['nullable','integer','min:0','max:120'],
             'phone' => ['nullable','string','max:30'],
         ]);
@@ -79,10 +80,14 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Ya tienes una cita que se superpone en ese horario.'], 422);
         }
 
+        // Compose patient_name from first/last if provided
+        $composedName = trim(($data['patient_first_name'] ?? '') . ' ' . ($data['patient_last_name'] ?? ''));
+        if ($composedName === '') { $composedName = $data['patient_name'] ?? null; }
+
         $appt = Appointment::create([
             'user_id' => $user->id,
             'dni' => $data['dni'] ?? null,
-            'patient_name' => $data['patient_name'] ?? null,
+            'patient_name' => $composedName,
             'patient_age' => $data['patient_age'] ?? null,
             'phone' => $data['phone'] ?? null,
             'title' => $data['title'] ?? 'Cita',
@@ -135,6 +140,9 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Ya tienes una cita que se superpone en ese horario.'], 422);
         }
 
+        $composedName = trim(($data['patient_first_name'] ?? '') . ' ' . ($data['patient_last_name'] ?? ''));
+        if ($composedName === '') { $composedName = $data['patient_name'] ?? $appointment->patient_name; }
+
         $appointment->update([
             'title' => $data['title'] ?? 'Cita',
             'start_at' => $startAt,
@@ -144,7 +152,7 @@ class AppointmentController extends Controller
             'channel' => $data['channel'] ?? null,
             'notes' => $data['notes'] ?? null,
             'dni' => $data['dni'] ?? $appointment->dni,
-            'patient_name' => $data['patient_name'] ?? $appointment->patient_name,
+            'patient_name' => $composedName,
             'patient_age' => $data['patient_age'] ?? $appointment->patient_age,
             'phone' => $data['phone'] ?? $appointment->phone,
         ]);
@@ -162,55 +170,7 @@ class AppointmentController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function patientLookup(Request $request)
-    {
-        $user = Auth::user();
-        $dni = trim((string)$request->query('dni', ''));
-        if ($dni === '') return response()->json([]);
-        $latest = Appointment::where('user_id', $user->id)
-            ->where('dni', $dni)
-            ->orderBy('updated_at', 'desc')
-            ->first(['patient_name','patient_age','dni']);
-        if ($latest) {
-            return response()->json($latest);
-        }
-
-        // Fallback externo: API RENIEC (configurable)
-        $apiUrl = rtrim((string)env('DNI_API_URL', ''), '/');
-        $apiToken = (string)env('DNI_API_TOKEN', '');
-        if ($apiUrl !== '') {
-            try {
-                // Intenta dos formatos comunes: GET /{dni} ó ?dni=
-                $url = strpos($apiUrl, '{dni}') !== false ? str_replace('{dni}', $dni, $apiUrl) : ($apiUrl . (str_contains($apiUrl, '?') ? '&' : '?') . 'dni=' . $dni);
-                $req = $apiToken ? Http::withToken($apiToken) : Http::withoutVerifying();
-                $resp = $req->timeout(6)->get($url);
-                if ($resp->ok()) {
-                    $data = $resp->json();
-                    // Normaliza campos posibles
-                    $first = $data['nombres'] ?? $data['nombre'] ?? null;
-                    $pat = $data['apellidoPaterno'] ?? $data['apellidopaterno'] ?? $data['apellido_paterno'] ?? $data['apellido'] ?? null;
-                    $mat = $data['apellidoMaterno'] ?? $data['apellidomaterno'] ?? $data['apellido_materno'] ?? null;
-                    $full = trim(implode(' ', array_filter([$first, $pat, $mat])));
-                    $birth = $data['fechaNacimiento'] ?? $data['fecha_nacimiento'] ?? $data['nacimiento'] ?? null;
-                    $age = null;
-                    if ($birth) {
-                        try { $age = Carbon::parse($birth)->age; } catch (\Throwable $e) { $age = null; }
-                    }
-                    if ($full || $age !== null) {
-                        return response()->json([
-                            'dni' => $dni,
-                            'patient_name' => $full ?: null,
-                            'patient_age' => $age,
-                        ]);
-                    }
-                }
-            } catch (\Throwable $e) {
-                // Ignorar y devolver vacío
-            }
-        }
-
-        return response()->json([]);
-    }
+    // Removed patientLookup and external API usage
 
     public function registry(Request $request)
     {

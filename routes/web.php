@@ -37,7 +37,6 @@ Route::middleware('auth')->group(function () {
     // Appointments (user)
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
     Route::get('/appointments/events', [AppointmentController::class, 'events'])->name('appointments.events');
-    Route::get('/appointments/patient', [AppointmentController::class, 'patientLookup'])->name('appointments.patient');
     Route::get('/appointments/registry', [AppointmentController::class, 'registry'])->name('appointments.registry');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::post('/appointments/{appointment}/update', [AppointmentController::class, 'update'])->name('appointments.update');
