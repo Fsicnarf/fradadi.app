@@ -30,7 +30,10 @@
   <div class="top">
     <div><strong>FRADADI</strong> · Panel de usuario</div>
     <div>
-      <a class="btn" href="{{ route('appointments.registry') }}" style="margin-right:8px;">Registro de usuarios</a>
+      <a class="btn" href="{{ route('appointments.registry') }}" style="margin-right:8px;">Registro de pacientes</a>
+      <a class="btn" href="{{ route('materials.index') }}" style="margin-right:8px; position:relative;" id="invBtn">Inventariado
+        <span id="invBadge" style="display:none; position:absolute; top:-6px; right:-6px; background:#dc2626; color:white; border-radius:999px; padding:2px 6px; font-size:12px;">0</span>
+      </a>
       <a class="btn" href="{{ route('home') }}">Volver al inicio</a>
       <form method="POST" action="{{ route('logout') }}" style="display:inline; margin-left:8px;">
         @csrf
@@ -115,13 +118,12 @@
           <button type="button" class="btn" id="cancelBtn">Cancelar</button>
           <button type="submit" class="btn" style="background:#1d4ed8; color:white;">Guardar cita</button>
         </div>
-      </form>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
       const calendarEl = document.getElementById('calendar');
       const today = new Date();
       const yyyy = today.getFullYear();
@@ -226,6 +228,36 @@
         }
       });
       calendar.render();
+
+      // Badge bajo stock
+      async function refreshLow() {
+        try {
+          const resp = await fetch('{{ route('materials.low') }}');
+          if (!resp.ok) return;
+          const data = await resp.json();
+          const badge = document.getElementById('invBadge');
+          // set link to current month
+          const now = new Date();
+          const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+          const invBtn = document.getElementById('invBtn');
+          if (invBtn) invBtn.href = `{{ route('materials.index') }}?month=${ym}`;
+          if (data && typeof data.low === 'number' && data.low > 0) {
+            badge.textContent = data.low;
+            badge.style.display = 'inline-block';
+          } else {
+            badge.style.display = 'none';
+          }
+        } catch(e) { /* ignore */ }
+      }
+      refreshLow();
+      setInterval(refreshLow, 30000);
+      // Also navigate to current month when clicking the badge explicitly
+      document.getElementById('invBadge')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const now = new Date();
+        const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+        window.location.href = `{{ route('materials.index') }}?month=${ym}`;
+      });
 
       const modal = document.getElementById('modal');
       const dateInput = document.getElementById('date');

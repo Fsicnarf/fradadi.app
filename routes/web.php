@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\MaterialController;
 use Illuminate\Support\Facades\Auth;
 
 // Landing page
@@ -38,8 +39,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
     Route::get('/appointments/events', [AppointmentController::class, 'events'])->name('appointments.events');
     Route::get('/appointments/registry', [AppointmentController::class, 'registry'])->name('appointments.registry');
+    Route::get('/appointments/stats', [AppointmentController::class, 'stats'])->name('appointments.stats');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::post('/appointments/{appointment}/update', [AppointmentController::class, 'update'])->name('appointments.update');
     Route::post('/appointments/{appointment}/delete', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
+
+    // Materials inventory
+    Route::get('/inventory', [MaterialController::class, 'index'])->name('materials.index');
+    Route::post('/inventory', [MaterialController::class, 'store'])->name('materials.store');
+    Route::get('/inventory/low-count', [MaterialController::class, 'lowCount'])->name('materials.low');
+    Route::get('/inventory/stats', [MaterialController::class, 'stats'])->name('materials.stats');
+    Route::put('/inventory/{material}', [MaterialController::class, 'update'])->name('materials.update');
+    Route::post('/inventory/{material}/delete', [MaterialController::class, 'destroy'])->name('materials.destroy');
+
+    // Patient history
+    Route::get('/patients/{key}/history', [\App\Http\Controllers\PatientHistoryController::class, 'show'])->name('patients.history');
+    Route::post('/patients/{key}/history', [\App\Http\Controllers\PatientHistoryController::class, 'store'])->name('patients.history.store');
+    Route::post('/patients/{key}/history/{file}/update', [\App\Http\Controllers\PatientHistoryController::class, 'update'])->name('patients.history.update');
+    Route::post('/patients/{key}/history/{file}/delete', [\App\Http\Controllers\PatientHistoryController::class, 'destroy'])->name('patients.history.delete');
+    Route::post('/patients/{key}/history/{file}/restore', [\App\Http\Controllers\PatientHistoryController::class, 'restore'])->name('patients.history.restore');
 });
 

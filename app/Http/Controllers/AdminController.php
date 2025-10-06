@@ -11,6 +11,27 @@ use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
+    public function approve(Request $request, User $user)
+    {
+        $admin = Auth::user();
+        if (!$admin || $admin->role !== 'admin') {
+            abort(403);
+        }
+        if ($user->role === 'admin') {
+            return back()->withErrors(['general' => 'No se puede aprobar a un administrador.']);
+        }
+        $user->approved = true;
+        if ($user->active === null) { $user->active = true; }
+        $user->save();
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'action' => 'approve_user',
+            'description' => 'Usuario aprobado por '.$admin->username,
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+        return redirect()->route('admin.pending')->with('status', 'Usuario aprobado');
+    }
     public function pending()
     {
         $user = Auth::user();

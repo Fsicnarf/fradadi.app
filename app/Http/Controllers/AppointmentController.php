@@ -17,8 +17,8 @@ class AppointmentController extends Controller
 
     public function events(Request $request)
     {
-        $user = Auth::user();
-        $events = Appointment::where('user_id', $user->id)
+        // Shared view: all authenticated users can see events
+        $events = Appointment::query()
             ->orderBy('start_at', 'asc')
             ->get()
             ->map(function ($a) {
@@ -104,10 +104,7 @@ class AppointmentController extends Controller
 
     public function update(Request $request, Appointment $appointment)
     {
-        $user = Auth::user();
-        if ($appointment->user_id !== $user->id) {
-            abort(403);
-        }
+        // Shared editing allowed for authenticated users
         $data = $request->validate([
             'date' => ['required','date'],
             'time' => ['required','date_format:H:i'],
@@ -125,8 +122,8 @@ class AppointmentController extends Controller
         $duration = (int)($data['duration_min'] ?? 30);
         $endAt = (clone $startAt)->addMinutes($duration);
 
-        // Overlap validation (exclude current appointment)
-        $overlap = Appointment::where('user_id', $user->id)
+        // Overlap validation (exclude current appointment) - check against same owner only
+        $overlap = Appointment::where('user_id', $appointment->user_id)
             ->where('id', '!=', $appointment->id)
             ->where(function($q) use ($startAt, $endAt) {
                 $q->whereBetween('start_at', [$startAt, $endAt])
@@ -162,10 +159,7 @@ class AppointmentController extends Controller
 
     public function destroy(Request $request, Appointment $appointment)
     {
-        $user = Auth::user();
-        if ($appointment->user_id !== $user->id) {
-            abort(403);
-        }
+        // Shared deletion allowed for authenticated users
         $appointment->delete();
         return response()->json(['ok' => true]);
     }
@@ -174,18 +168,69 @@ class AppointmentController extends Controller
 
     public function registry(Request $request)
     {
-        $user = Auth::user();
         $now = now();
-        $upcoming = Appointment::where('user_id', $user->id)
+        $upcoming = Appointment::query()->with('user')
             ->where('start_at', '>=', $now)
             ->orderBy('start_at', 'asc')
             ->paginate(10, ['*'], 'up')
             ->appends($request->query());
-        $past = Appointment::where('user_id', $user->id)
+        $past = Appointment::query()->with('user')
             ->where('start_at', '<', $now)
             ->orderBy('start_at', 'desc')
             ->paginate(10, ['*'], 'past')
             ->appends($request->query());
-        return view('user.registry', compact('upcoming','past'));
+        // Distinct patients (by DNI if present, else by name)
+        // Use aggregates to allow ordering by last appointment
+        $patients = Appointment::query()
+            ->selectRaw("COALESCE(NULLIF(dni, ''), CONCAT('NAME:', patient_name)) as key_id, MIN(dni) as dni, MIN(patient_name) as patient_name, MIN(patient_age) as patient_age, MAX(start_at) as max_start")
+            ->groupBy('key_id')
+            ->orderByDesc('max_start')
+            ->limit(24)
+            ->get();
+        return view('user.registry', compact('upcoming','past','patients'));
+    }
+
+    public function stats(Request $request)
+    {
+        $year = (int)($request->query('year', now()->year));
+        $month = (int)($request->query('month', 0)); // 1-12 or 0 for whole year
+        $data = [];
+        if ($month >= 1 && $month <= 12) {
+            $start = Carbon::create($year, $month, 1)->startOfMonth();
+            $end = (clone $start)->endOfMonth();
+            $counts = Appointment::query()
+                ->whereBetween('start_at', [$start, $end])
+                ->selectRaw('DATE(start_at) as d, COUNT(*) as c')
+                ->groupBy('d')
+                ->orderBy('d')
+                ->pluck('c','d');
+            $labels = [];
+            $values = [];
+            $cursor = (clone $start);
+            while ($cursor <= $end) {
+                $d = $cursor->toDateString();
+                $labels[] = $cursor->format('d');
+                $values[] = (int)($counts[$d] ?? 0);
+                $cursor->addDay();
+            }
+            return response()->json(['granularity' => 'day', 'labels' => $labels, 'values' => $values]);
+        } else {
+            $start = Carbon::create($year, 1, 1)->startOfYear();
+            $end = (clone $start)->endOfYear();
+            $counts = Appointment::query()
+                ->whereBetween('start_at', [$start, $end])
+                ->selectRaw('DATE_FORMAT(start_at, "%Y-%m") as ym, COUNT(*) as c')
+                ->groupBy('ym')
+                ->orderBy('ym')
+                ->pluck('c','ym');
+            $labels = [];
+            $values = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $ym = Carbon::create($year, $m, 1)->format('Y-m');
+                $labels[] = Carbon::create($year, $m, 1)->locale('es')->isoFormat('MMM');
+                $values[] = (int)($counts[$ym] ?? 0);
+            }
+            return response()->json(['granularity' => 'month', 'labels' => $labels, 'values' => $values]);
+        }
     }
 }
