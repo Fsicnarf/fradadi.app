@@ -58,5 +58,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/patients/{key}/history/{file}/update', [\App\Http\Controllers\PatientHistoryController::class, 'update'])->name('patients.history.update');
     Route::post('/patients/{key}/history/{file}/delete', [\App\Http\Controllers\PatientHistoryController::class, 'destroy'])->name('patients.history.delete');
     Route::post('/patients/{key}/history/{file}/restore', [\App\Http\Controllers\PatientHistoryController::class, 'restore'])->name('patients.history.restore');
+    Route::post('/patients/{key}/history/bulk-delete', [\App\Http\Controllers\PatientHistoryController::class, 'bulkDestroy'])->name('patients.history.bulk_delete');
 });
 

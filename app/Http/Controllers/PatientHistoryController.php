@@ -53,6 +53,7 @@ class PatientHistoryController extends Controller
         $user = Auth::user();
         $data = $request->validate([
             'file' => ['required','file','max:51200'], // 50 MB
+            'title' => ['nullable','string','max:150'],
             'description' => ['nullable','string','max:1000'],
         ]);
         $uploaded = $data['file'];
@@ -61,6 +62,7 @@ class PatientHistoryController extends Controller
             'user_id' => $user->id,
             'key' => $key,
             'path' => $path,
+            'title' => $data['title'] ?? null,
             'original_name' => $uploaded->getClientOriginalName(),
             'mime' => $uploaded->getClientMimeType(),
             'size' => $uploaded->getSize(),
@@ -80,8 +82,10 @@ class PatientHistoryController extends Controller
     {
         $user = Auth::user();
         $data = $request->validate([
+            'title' => ['nullable','string','max:150'],
             'description' => ['nullable','string','max:1000'],
         ]);
+        $file->title = $data['title'] ?? $file->title;
         $file->description = $data['description'] ?? null;
         $file->save();
         ActivityLog::create([
@@ -124,5 +128,34 @@ class PatientHistoryController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
         return redirect()->route('patients.history', ['key' => $key])->with('ok','Archivo restaurado');
+    }
+
+    public function bulkDestroy(Request $request, string $key)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'ids' => ['required','array'],
+            'ids.*' => ['integer'],
+        ]);
+        $ids = $data['ids'];
+        $files = PatientFile::whereIn('id', $ids)->where('key', $key)->get();
+        $count = 0;
+        foreach ($files as $file) {
+            if ($file->path) {
+                Storage::disk('public')->delete($file->path);
+            }
+            $file->delete();
+            $count++;
+        }
+        if ($count > 0) {
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => 'patient_file_bulk_delete',
+                'description' => "Eliminación masiva ({$count}) de $key",
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+        return redirect()->route('patients.history', ['key' => $key])->with('ok', "Archivos eliminados: $count");
     }
 }

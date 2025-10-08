@@ -14,6 +14,7 @@ class PatientFile extends Model
         'user_id',
         'key', // DNI o NAME:<nombre>
         'path',
+        'title',
         'original_name',
         'mime',
         'size',
