@@ -335,11 +335,20 @@
       content.addEventListener('wheel', (e)=>{
         if (!inner) return;
         e.preventDefault();
+        const rect = content.getBoundingClientRect();
+        const mx = e.clientX - rect.left; // mouse x within content
+        const my = e.clientY - rect.top;  // mouse y within content
         const delta = -Math.sign(e.deltaY); // up -> zoom in
         const newScale = Math.min(5, Math.max(1, scale + delta*0.2));
         if (newScale === scale) return;
+        // Scene coords under mouse before zoom
+        const sceneX = (mx - offsetX) / scale;
+        const sceneY = (my - offsetY) / scale;
+        // Update scale
         scale = newScale;
-        // Optional: when zooming in, enable panning cursor
+        // Recompute offsets to keep (sceneX, sceneY) under cursor after zoom
+        offsetX = mx - sceneX * scale;
+        offsetY = my - sceneY * scale;
         if (scale > 1) inner.classList.add('grab'); else inner.classList.remove('grab');
         applyTransform();
       }, { passive:false });
