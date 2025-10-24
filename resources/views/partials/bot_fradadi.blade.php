@@ -16,7 +16,7 @@
     </div>
     <div id="bf-messages" style="padding:12px; display:flex; flex-direction:column; gap:10px; overflow:auto; max-height:50vh; background:white;">
       <div style="align-self:flex-start; max-width:88%; background:#f1f5f9; color:#0f172a; padding:8px 10px; border-radius:12px;">Hola, soy Bot‑FRADADI. Pregúntame sobre prevención, caries, cepillado, citas, dolor, piezas FDI, etc.</div>
-      <div style="display:flex; flex-wrap:wrap; gap:6px;">
+      <div id="bf-suggests" style="display:flex; flex-wrap:wrap; gap:6px;">
         <button class="bf-suggest" type="button" style="border:1px solid #e5e7eb; background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;">¿Qué es caries c1, c2, c3?</button>
         <button class="bf-suggest" type="button" style="border:1px solid #e5e7eb; background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;">Números FDI 11/21/31/41</button>
         <button class="bf-suggest" type="button" style="border:1px solid #e5e7eb; background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;">Dolor de muela</button>
@@ -45,83 +45,80 @@
   const form = document.getElementById('bf-form');
   const input = document.getElementById('bf-input');
   const box = document.getElementById('bf-messages');
+  const suggests = document.getElementById('bf-suggests');
+  const TOPIC_POOL = [
+    // 📚 Historia y Fundamentos
+    'Orígenes de la Odontología','Evolución de la práctica dental','Personajes históricos en odontología','Avances tecnológicos en odontología moderna',
+    // 🧠 Promoción y Prevención
+    'Conceptos clave de promoción de salud bucal','Prevención: niveles y estrategias','Educación para la salud en odontología','Diferencias entre promoción y prevención',
+    // 🔬 Epidemiología y Salud Pública
+    'Introducción a la epidemiología bucal','Tipos de investigaciones epidemiológicas','Perfil epidemiológico bucodental','Clasificación y vigilancia epidemiológica',
+    // 🦷 Enfermedades y Prevención
+    'Caries dental: causas y prevención','Índices odontológicos (CPO-D, CEO-D, etc.)','Saliva y microflora bucal','Uso del ozono y fluoruros en caries',
+    // 🪥 Higiene y Técnicas
+    'Técnicas de cepillado dental','Índices de higiene bucal','Selladores y edulcorantes: usos y contraindicaciones',
+    // 🩺 Enfermedades Periodontales
+    'Gingivitis: factores de riesgo y tratamiento','Periodontitis: prevención y manejo','Índices periodontales (Russell, PMA, etc.)',
+    // 😬 Maloclusiones y Ortodoncia
+    'Prevención de maloclusiones','Ortodoncia interceptiva','Niveles de prevención en ortodoncia',
+    // 🧪 Diagnóstico y Cáncer Bucal
+    'Factores de riesgo del cáncer bucal','Diagnóstico diferencial en odontología',
+    // 📷 Radiología
+    'Radiología en odontología preventiva'
+  ];
+  function shuffle(arr){ for (let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+  function renderRandomSuggests(n=6){
+    if (!suggests) return;
+    suggests.innerHTML = '';
+    const picks = shuffle(TOPIC_POOL.slice()).slice(0, n);
+    picks.forEach(label => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'bf-suggest';
+      b.textContent = label;
+      b.style.border = '1px solid #e5e7eb';
+      b.style.background = '#fff';
+      b.style.borderRadius = '999px';
+      b.style.padding = '6px 10px';
+      b.style.cursor = 'pointer';
+      b.addEventListener('click', ()=>{ sendUser(label); reply(label); });
+      suggests.appendChild(b);
+    });
+  }
   function open(){ panel.style.display='block'; panel.setAttribute('aria-hidden','false'); toggle.setAttribute('aria-expanded','true'); setTimeout(()=>input.focus(),100); }
   function close(){ panel.style.display='none'; panel.setAttribute('aria-hidden','true'); toggle.setAttribute('aria-expanded','false'); }
-  toggle.addEventListener('click', ()=>{ const show = panel.style.display!=='block'; show?open():close(); });
+  toggle.addEventListener('click', ()=>{ const show = panel.style.display!=='block'; if (show) { renderRandomSuggests(); } show?open():close(); });
   closeBtn.addEventListener('click', close);
   box.addEventListener('click', (e)=>{ const s = e.target.closest('.bf-suggest'); if(!s) return; sendUser(s.textContent); reply(s.textContent); });
   form.addEventListener('submit', (e)=>{ e.preventDefault(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); });
+  // inicial
+  renderRandomSuggests();
   function addMsg(text, cls){ const d=document.createElement('div'); d.className='bf-msg '+cls; d.textContent=text; box.appendChild(d); box.scrollTop=box.scrollHeight; }
   function sendUser(t){ addMsg(t, 'bf-user'); }
   async function reply(t){
-    const ans = answer(t);
-    addMsg(ans, 'bf-bot');
+    // Respuesta corta por intents locales
+    const local = answer(t);
+    if (local) addMsg(local, 'bf-bot');
+    // Consultar a Gemini vía backend
     try {
-      const url = '{{ route('bot.search') }}' + '?q=' + encodeURIComponent(t);
-      const r = await fetch(url);
+      const r = await fetch('{{ route('bot.ask') }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ q: t })
+      });
       if (r.ok) {
         const data = await r.json();
-        const items = (data && data.results) ? data.results : [];
-        if (items.length) {
-          addResults(items);
-        }
+        if (data && data.answer) addMsg(data.answer, 'bf-bot');
+        else addMsg('No obtuve respuesta. Inténtalo de nuevo.', 'bf-bot');
+      } else {
+        addMsg('No se pudo consultar la IA (Gemini).', 'bf-bot');
       }
-    } catch(e) { /* ignore */ }
-  }
-  function addResults(items){
-    const wrap = document.createElement('div');
-    wrap.className = 'bf-msg bf-bot';
-    const title = document.createElement('div');
-    title.textContent = 'Material relacionado:';
-    title.style.fontWeight = '700';
-    wrap.appendChild(title);
-    const list = document.createElement('div');
-    list.style.display = 'flex';
-    list.style.flexDirection = 'column';
-    list.style.gap = '8px';
-    items.forEach(it => {
-      const row = document.createElement('div');
-      const a = document.createElement('a');
-      a.href = it.url || '#';
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = it.title || 'Documento';
-      a.style.color = '#1d4ed8';
-      a.style.fontWeight = '700';
-      a.style.textDecoration = 'none';
-      const sn = document.createElement('div');
-      sn.textContent = it.snippet ? (it.snippet + '…') : (it.description || '');
-      sn.style.color = '#475569';
-      sn.style.fontSize = '12px';
-      row.appendChild(a);
-      row.appendChild(sn);
-      // topic chips from auto_titles
-      if (Array.isArray(it.auto_titles) && it.auto_titles.length) {
-        const chips = document.createElement('div');
-        chips.style.display = 'flex';
-        chips.style.flexWrap = 'wrap';
-        chips.style.gap = '6px';
-        chips.style.marginTop = '4px';
-        it.auto_titles.slice(0,4).forEach(tt => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'bf-suggest';
-          btn.textContent = tt;
-          btn.style.border = '1px solid #e5e7eb';
-          btn.style.background = '#fff';
-          btn.style.borderRadius = '999px';
-          btn.style.padding = '6px 10px';
-          btn.style.cursor = 'pointer';
-          btn.addEventListener('click', ()=>{ sendUser(tt); reply(tt); });
-          chips.appendChild(btn);
-        });
-        row.appendChild(chips);
-      }
-      list.appendChild(row);
-    });
-    wrap.appendChild(list);
-    box.appendChild(wrap);
-    box.scrollTop = box.scrollHeight;
+    } catch(e) {
+      addMsg('Error de red al consultar la IA.', 'bf-bot');
+    }
   }
   function answer(q){
     const s = q.toLowerCase();
@@ -133,7 +130,22 @@
     if (/(bruxismo|apretar|ferula)/.test(s)) return 'Bruxismo: apretar o rechinar dientes. Puede causar desgaste y dolor. Una férula de descarga nocturna suele ayudar.';
     if (/(ortodoncia|frenos|alineadores)/.test(s)) return 'Ortodoncia alinea dientes y mordida. Hay brackets metálicos/estéticos y alineadores. Una valoración determina el plan.';
     if (/(cita|turno|agendar|horario)/.test(s)) return 'Para agendar o ver tu registro, usa la sección de citas en el sistema (Registro).';
-    if (/(periodontal|encía|sangrado)/.test(s)) return 'Sangrado de encía suele indicar gingivitis. Mejora higiene y consulta para evaluación periodontal.';
+    if (/(periodontal|encia|encía|sangrado)/.test(s)) return 'Sangrado de encía suele indicar gingivitis. Mejora higiene y consulta para evaluación periodontal.';
+    // Temas curados adicionales
+    if (/(cancer|cáncer).*bucal|factores de riesgo.*cancer|factores de riesgo.*cáncer/.test(s)) return 'Cáncer bucal: factores de riesgo → tabaco, alcohol, HPV, exposición solar (labio), mala higiene, irritación crónica. Signos de alarma: úlceras que no cicatrizan, leucoplasias/eritroplasias.';
+    if (/(diagnostico diferencial|diagnóstico diferencial)/.test(s)) return 'Diagnóstico diferencial: comparar signos/síntomas con entidades similares para descartar. Historia clínica, examen intra/extraoral y pruebas complementarias orientan la decisión.';
+    if (/(radiologia|radiología).*preventiva/.test(s)) return 'Radiología preventiva: bite-wings para caries interproximales, periapicales para lesiones apicales, panorámica para visión general. Usar cuando cambie la conducta clínica.';
+    if (/(promocion|promoción).*prevencion|prevencion: niveles|prevención: niveles/.test(s)) return 'Promoción: capacitar y empoderar para salud bucal. Prevención: acciones específicas (primaria, secundaria, terciaria). Primaria evita aparición; secundaria detecta precoz; terciaria limita secuelas.';
+    if (/(epidemiologia|epidemiología).*bucal|perfil epidemiologico|perfil epidemiológico/.test(s)) return 'Epidemiología bucal: estudia distribución/determinantes de enfermedades orales. Perfil: prevalencia de caries, enfermedad periodontal, maloclusiones, hábitos y acceso a servicios.';
+    if (/(indices odontologicos|índices odontológicos|cpo-d|ceo-d|cpod|ceod)/.test(s)) return 'Índices odontológicos: CPO-D (permanentes) y CEO-D (temporales) miden piezas cariadas, perdidas y obturadas. Útiles para vigilancia y planificación.';
+    if (/(saliva|microflora|microbiota).*bucal/.test(s)) return 'Saliva: tampón, remineralización y defensa. Microflora: equilibrio entre bacterias acidogénicas y defensas del huésped. Flujo salival bajo aumenta riesgo de caries.';
+    if (/(ozono|fluoruros|flúor).*caries/.test(s)) return 'Prevención con ozono y fluoruros: el flúor favorece remineralización y resistencia del esmalte; el ozono puede reducir carga bacteriana en lesiones iniciales (uso adyuvante).';
+    if (/(indices de higiene|índices de higiene|opl|simplificado|green).*higiene/.test(s)) return 'Índices de higiene: OHI-S (Greene y Vermillion) valora detritus y cálculo; Silness y Löe miden placa. Útiles para educación y seguimiento.';
+    if (/(selladores|edulcorantes)/.test(s)) return 'Selladores: protegen fosas y fisuras en molares en riesgo. Edulcorantes como xilitol reducen cariogenicidad; evitar abuso de azúcares fermentables.';
+    if (/(gingivitis)/.test(s)) return 'Gingivitis: inflamación sin pérdida de inserción. Manejo: higiene mecánica, profilaxis, control de placa y factores locales.';
+    if (/(periodontitis)/.test(s)) return 'Periodontitis: pérdida de inserción/soporte óseo. Prevención/manejo: control de placa, raspado/alizado radicular y control de factores de riesgo (tabaco, diabetes).';
+    if (/(maloclusion|maloclusión|oclusion|oclusión).*prevencion/.test(s)) return 'Prevención de maloclusiones: control de hábitos orales, manejo de espacio en dentición mixta, detección temprana de discrepancias óseo-dentarias.';
+    if (/(ortodoncia interceptiva)/.test(s)) return 'Ortodoncia interceptiva: intervenciones tempranas para corregir problemas en crecimiento (expansión, mantenedores de espacio, control de hábitos).';
     return 'Puedo ayudarte con caries, FDI, cepillado, dolor, ortodoncia, periodoncia y más. Intenta preguntar con palabras clave.';
   }
 })();

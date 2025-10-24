@@ -72,5 +72,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/bot/knowledge/{doc}/delete', [\App\Http\Controllers\BotKnowledgeController::class, 'destroy'])->name('admin.bot.knowledge.delete');
     // Bot search endpoint for widget
     Route::get('/bot/search', [\App\Http\Controllers\BotKnowledgeController::class, 'search'])->name('bot.search');
+    // Bot Gemini ask endpoint
+    Route::post('/bot/ask', [\App\Http\Controllers\BotAiController::class, 'ask'])->name('bot.ask');
 });
 

@@ -75,11 +75,22 @@ class BotKnowledgeController extends Controller
             ->orderByDesc('created_at')
             ->limit(5)
             ->get()
-            ->map(function($d){
-                // Build a small snippet from content if available
+            ->map(function($d) use ($q){
+                // Build a snippet around the first occurrence of query terms
                 $snippet = null;
                 if (!empty($d->content)) {
-                    $snippet = mb_substr(trim($d->content), 0, 240);
+                    $text = trim($d->content);
+                    $pos = null;
+                    $needles = array_filter(array_map('trim', preg_split('/\s+/', $q)));
+                    foreach ($needles as $needle) {
+                        $p = mb_stripos($text, $needle);
+                        if ($p !== false) { $pos = $p; break; }
+                    }
+                    if ($pos === null) { $pos = 0; }
+                    $start = max(0, $pos - 100);
+                    $len = 260;
+                    $snippet = ($start > 0 ? '…' : '') . mb_substr($text, $start, $len) . '…';
+                    $snippet = preg_replace('/\s+/', ' ', $snippet);
                 }
                 return [
                     'id' => $d->id,
