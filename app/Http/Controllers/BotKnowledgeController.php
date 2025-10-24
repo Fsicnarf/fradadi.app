@@ -124,4 +124,36 @@ class BotKnowledgeController extends Controller
         $candidates = array_values(array_unique(array_map(function($s){ return mb_substr($s,0,80); }, $candidates)));
         return $candidates;
     }
+
+    public function topics(Request $request)
+    {
+        // Build a large pool of titles from auto_titles, titles and tags
+        $docs = BotDoc::select(['title','auto_titles','tags'])->orderByDesc('created_at')->get();
+        $pool = [];
+        foreach ($docs as $d) {
+            if (is_array($d->auto_titles)) {
+                foreach ($d->auto_titles as $t) { if ($t) $pool[] = trim($t); }
+            }
+            if ($d->title) $pool[] = trim($d->title);
+            if ($d->tags) {
+                foreach (explode(',', $d->tags) as $tg) { $tg = trim($tg); if ($tg) $pool[] = $tg; }
+            }
+        }
+        // Uniques, limit to 300
+        $pool = array_values(array_unique(array_filter($pool)));
+        // Keep strings not too short and not too long
+        $pool = array_values(array_filter($pool, function($s){ $l = mb_strlen($s); return $l >= 4 && $l <= 120; }));
+        // If not enough, add some default dental topics
+        if (count($pool) < 220) {
+            $defaults = [
+                'Caries dental: diagnóstico y prevención','FDI: nomenclatura dental','Técnicas de cepillado dental','Índices CPO-D y CEO-D','Gingivitis y periodontitis','Radiología en odontología preventiva','Ortodoncia interceptiva','Selladores de fosas y fisuras','Cáncer bucal: factores de riesgo','Profilaxis y control de placa','Fluoruros tópicos','Higiene oral en niños','Bruxismo: manejo clínico','Hipoplasia del esmalte','Traumatismos dentales','Enfermedades pulpares','Endodoncia: indicaciones','Exodoncia: consideraciones','Materiales restauradores','Aislamiento absoluto','Anestesia local en odontología','Control del dolor dental','Halitosis: causas y manejo','Lesiones de mucosa oral','Candidiasis oral','Xerostomía','Desgaste dentario','Erosión dental','Maloclusiones: clasificación','Mantenedores de espacio','Dietas y caries','Educación para la salud bucal','Enjuagues bucales','Placa bacteriana y sarro','Bolsas periodontales','Tinciones dentales','Hipersensibilidad dentinaria','Rehabilitación oral básica','Anclaje ortodóncico','Teleodontología básica','Bioseguridad en clínica','Instrumental odontológico','Consentimiento informado','Historia clínica odontológica','Odontología preventiva en embarazadas','Periodoncia no quirúrgica','Raspado y alisado radicular','Profilaxis antibiótica en odontología','Lesiones blancas y rojas','Leucoplasia y eritroplasia','Úlceras orales','Aftas recurrentes','Medicina oral tópicos','HPV y cavidad oral','Tabaquismo y salud bucal','Diabetes y enfermedad periodontal','Farmacología en odontología','Antibióticos de uso odontológico','Analgesia en odontología','Emergencias odontológicas','Odontopediatría: manejo conductual','Erupción dental','Dentición mixta','Sellado de surcos en niños','Caries rampante','Sialometría y saliva','Microbiota bucal','Control químico de placa','Clorhexidina: indicaciones','Índice de higiene oral','PMA y Russell','Exámenes complementarios','Fotografía clínica en odontología','Radiografías bite-wing','Panorámica vs periapical','Protección radiológica','Prostodoncia parcial','Encerado diagnóstico','Brackets vs alineadores','Retenedores','Hábitos orales nocivos','Deleciones de espacio','Apiñamiento dental','Malposiciones dentarias','Lesiones no cariosas','Amalgama vs resina','Ionómero de vidrio','Cavitación inicial','Manejo mínimamente invasivo','Odontología basada en la evidencia','Plan de tratamiento','Pronóstico en odontología','Seguimiento y control','Registro odontológico','Odontología comunitaria','Epidemiología bucal','Vigilancia epidemiológica',
+            ];
+            $need = 240 - count($pool);
+            if ($need > 0) $pool = array_merge($pool, array_slice($defaults, 0, max(0,$need)));
+        }
+        // Limit and shuffle
+        shuffle($pool);
+        $pool = array_slice($pool, 0, 300);
+        return response()->json(['topics' => $pool]);
+    }
 }
