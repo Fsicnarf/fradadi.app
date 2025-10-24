@@ -59,5 +59,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/patients/{key}/history/{file}/delete', [\App\Http\Controllers\PatientHistoryController::class, 'destroy'])->name('patients.history.delete');
     Route::post('/patients/{key}/history/{file}/restore', [\App\Http\Controllers\PatientHistoryController::class, 'restore'])->name('patients.history.restore');
     Route::post('/patients/{key}/history/bulk-delete', [\App\Http\Controllers\PatientHistoryController::class, 'bulkDestroy'])->name('patients.history.bulk_delete');
+
+    // Dental record (odontograma)
+    Route::get('/patients/{key}/dental-record', [\App\Http\Controllers\DentalRecordController::class, 'show'])
+        ->name('patients.dental.show');
+    Route::post('/patients/{key}/dental-record', [\App\Http\Controllers\DentalRecordController::class, 'save'])
+        ->name('patients.dental.save');
+
+    // Bot knowledge (admin)
+    Route::get('/admin/bot/knowledge', [\App\Http\Controllers\BotKnowledgeController::class, 'index'])->name('admin.bot.knowledge');
+    Route::post('/admin/bot/knowledge', [\App\Http\Controllers\BotKnowledgeController::class, 'store'])->name('admin.bot.knowledge.store');
+    Route::post('/admin/bot/knowledge/{doc}/delete', [\App\Http\Controllers\BotKnowledgeController::class, 'destroy'])->name('admin.bot.knowledge.delete');
+    // Bot search endpoint for widget
+    Route::get('/bot/search', [\App\Http\Controllers\BotKnowledgeController::class, 'search'])->name('bot.search');
 });
 

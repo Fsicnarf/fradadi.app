@@ -21,6 +21,7 @@
   <div class="top">
     <div><strong>Panel administrador</strong></div>
     <div>
+      <a class="link" href="{{ route('admin.bot.knowledge') }}" style="margin-right:8px;">Documentos del bot</a>
       <a class="link" href="{{ route('admin.history.all') }}" style="margin-right:8px;">Historial general</a>
       <form method="POST" action="{{ route('logout') }}" style="display:inline;">
         @csrf
@@ -143,5 +144,6 @@
       </table>
     @endif
   </div>
+@include('partials.bot_fradadi')
 </body>
 </html>

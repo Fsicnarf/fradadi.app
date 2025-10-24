@@ -103,6 +103,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin:12px 0 8px;">
         <h3 style="margin:0;">Agregar al historial</h3>
         <div style="display:flex; gap:8px; align-items:center;">
+          <a href="{{ route('patients.dental.show', ['key' => $key]) }}" class="btn hide-on-edit" style="background:#22c55e; color:white;">Ficha odontológica</a>
           <button id="toggleEdit" type="button" class="btn" style="background:#0ea5e9; color:white;" aria-pressed="false">Editar</button>
           <button id="saveAll" type="button" class="btn edit-only" style="background:#16a34a; color:white;">Guardar cambios</button>
           <div class="bulk-actions edit-only">
@@ -399,5 +400,6 @@
     <button class="close" title="Cerrar" aria-label="Cerrar">✕</button>
     <div class="content" id="viewerContent"></div>
   </div>
+@include('partials.bot_fradadi')
 </body>
 </html>

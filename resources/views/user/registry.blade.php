@@ -219,5 +219,6 @@
       modal?.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
     })();
   </script>
+@include('partials.bot_fradadi')
 </body>
 </html>

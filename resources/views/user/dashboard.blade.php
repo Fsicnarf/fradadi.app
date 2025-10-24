@@ -390,5 +390,6 @@
       });
     });
   </script>
+@include('partials.bot_fradadi')
 </body>
 </html>

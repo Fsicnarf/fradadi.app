@@ -172,6 +172,7 @@
       })();
     </script>
     <footer class="footer">© 2025 FRADADI · Huánuco, Perú</footer>
+@include('partials.bot_fradadi')
 </body>
 </html>
 

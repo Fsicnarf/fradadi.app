@@ -92,5 +92,6 @@
       <div style="margin-top:12px;">{{ $logs->links() }}</div>
     @endif
   </div>
+@include('partials.bot_fradadi')
 </body>
 </html>
