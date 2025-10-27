@@ -475,16 +475,8 @@
       if (!r.ok) throw new Error('search_failed');
       const data = await r.json();
       let items = Array.isArray(data.results) ? data.results.slice() : [];
-      if (!items.length) { addMsg('formule su pregunta de otra manera', 'bf-bot'); return; }
-      // dedupe by title+snippet y tomar solo 1 aleatorio
-      items = uniqueBy(items, it => (String(it.title||'').toLowerCase()+'|'+String(it.snippet||it.description||'').toLowerCase()));
-      const pick = shuffle(items)[0];
-      const msg = pick ? ((pick.snippet||'').trim() || (pick.description||'').trim()) : '';
-      addMsg(msg || 'formule su pregunta de otra manera', 'bf-bot');
-      box.scrollTop = box.scrollHeight;
-    } catch(e) {
-      addMsg('formule su pregunta de otra manera', 'bf-bot');
-    }
+
+    } catch(e) {}
   }
   function answer(q){ return ''; }
 })();
