@@ -18,9 +18,9 @@
       <div id="bf-greet" style="align-self:flex-start; max-width:88%; background:#f1f5f9; color:#0f172a; padding:8px 10px; border-radius:12px;">Bienvenid@, soy tu asistente virtual Bot-FRADADI, para ayudarte con conocimientos odontológicos.</div>
       <div id="bf-suggests" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
     </div>
-    <form id="bf-form" style="display:flex; gap:6px; padding:10px; background:#f8fafc; border-top:1px solid #e5e7eb;">
+    <form id="bf-form" style="display:flex; gap:6px; padding:10px; background:#f8fafc; border-top:1px solid #e5e7eb;" novalidate action="javascript:void(0);">
       <input id="bf-input" type="text" placeholder="Escribe tu pregunta…" aria-label="Mensaje" style="flex:1; border:1px solid #e2e8f0; border-radius:10px; padding:10px;" />
-      <button class="bf-send" type="submit" style="background:#1d4ed8; color:white; border:1px solid #93c5fd; border-radius:10px; padding:10px 12px; font-weight:800; cursor:pointer;">Enviar</button>
+      <button id="bf-send" class="bf-send" type="button" onclick="return (window.bfSend?window.bfSend():false)" style="background:#1d4ed8; color:white; border:1px solid #93c5fd; border-radius:10px; padding:10px 12px; font-weight:800; cursor:pointer;">Enviar</button>
     </form>
   </div>
 </div>
@@ -39,9 +39,11 @@
   const closeBtn = document.getElementById('bf-close');
   const form = document.getElementById('bf-form');
   const input = document.getElementById('bf-input');
+  const sendBtn = (function(){ try { return document.getElementById('bf-send') || document.querySelector('#bf-form .bf-send'); } catch(_) { return null; } })();
   const box = document.getElementById('bf-messages');
   const suggests = document.getElementById('bf-suggests');
   const greet = document.getElementById('bf-greet');
+  const CSRF = '{{ csrf_token() }}';
   let TOPIC_POOL = [];
   const GREETINGS = [
     'Bienvenid@, soy tu asistente virtual Bot-FRADADI, listo para apoyarte con información odontológica.',
@@ -433,7 +435,7 @@
       b.style.borderRadius = '999px';
       b.style.padding = '6px 10px';
       b.style.cursor = 'pointer';
-      b.addEventListener('click', ()=>{ sendUser(label); reply(label); });
+      b.addEventListener('click', ()=>{ input.value = label; input.focus(); });
       suggests.appendChild(b);
       if (used.size >= n) break;
     }
@@ -442,11 +444,43 @@
   fetch('{{ route('bot.topics') }}').then(r=>r.ok?r.json():null).then(j=>{ if(j&&Array.isArray(j.topics)) { TOPIC_POOL = j.topics; renderRandomSuggests(); } }).catch(()=>{});
   // Greeting aleatorio único
   if (greet) { const g = GREETINGS[Math.floor(Math.random()*GREETINGS.length)]; greet.textContent = g; }
-  function open(){ panel.style.display='block'; panel.setAttribute('aria-hidden','false'); toggle.setAttribute('aria-expanded','true'); setTimeout(()=>input.focus(),100); }
-  function close(){ panel.style.display='none'; panel.setAttribute('aria-hidden','true'); toggle.setAttribute('aria-expanded','false'); }
-  toggle.addEventListener('click', ()=>{ const show = panel.style.display!=='block'; if (show) { renderRandomSuggests(); } show?open():close(); });
-  closeBtn.addEventListener('click', close);
-  form.addEventListener('submit', (e)=>{ e.preventDefault(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); });
+  function open(){ 
+    panel.style.display='block'; 
+    panel.removeAttribute('aria-hidden');
+    try { panel.inert = false; } catch(_) {}
+    toggle.setAttribute('aria-expanded','true');
+    setTimeout(()=>input.focus(),100); 
+  }
+  function close(){ 
+    panel.style.display='none'; 
+    panel.setAttribute('aria-hidden','true');
+    try { panel.inert = true; } catch(_) {}
+    toggle.setAttribute('aria-expanded','false'); 
+  }
+  // Ensure initial closed state is inert
+  try { if (panel.getAttribute('aria-hidden') !== 'false') panel.inert = true; } catch(_) {}
+  toggle.addEventListener('click', (e)=>{ e.stopPropagation(); const show = panel.style.display!=='block'; if (show) { renderRandomSuggests(); } show?open():close(); });
+  closeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); close(); });
+  form.addEventListener('submit', (e)=>{ e.preventDefault(); e.stopPropagation(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); });
+  // Capturing listener as fallback in case other scripts stop bubbling
+  form.addEventListener('submit', (e)=>{ e.preventDefault(); e.stopPropagation(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); }, true);
+  // Enter to send from input
+  input.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); } });
+  if (sendBtn) {
+    sendBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); const t = input.value.trim(); if(!t) return; sendUser(t); input.value=''; reply(t); });
+  }
+  // Delegated fallback (capturing) to ensure clicks are handled even if direct binding fails
+  document.addEventListener('click', (e)=>{
+    const btn = e.target && (e.target.id === 'bf-send' ? e.target : (e.target.closest ? e.target.closest('#bf-send') : null));
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const t = input.value.trim();
+    if (!t) return;
+    sendUser(t);
+    input.value = '';
+    reply(t);
+  }, true);
   // inicial
   renderRandomSuggests();
   let lastBotText = '';
@@ -471,13 +505,33 @@
     try {
       const la = localAnswer(t);
       if (la) addMsg(la, 'bf-bot');
-      const url = '{{ route('bot.search') }}' + '?q=' + encodeURIComponent(t);
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('search_failed');
-      const data = await r.json();
-      let items = Array.isArray(data.results) ? data.results.slice() : [];
-
-    } catch(e) {}
+      const sUrl = '{{ route('bot.search') }}' + '?q=' + encodeURIComponent(t);
+      const r = await fetch(sUrl);
+      if (r.ok) {
+        const data = await r.json();
+        const items = Array.isArray(data.results) ? data.results.slice(0, 3) : [];
+        for (const it of items) {
+          const title = it.title || 'Documento relacionado';
+          const snippet = (it.snippet || '').toString().trim();
+          addMsg(title + (snippet ? ' · ' + snippet : ''), 'bf-bot');
+        }
+      }
+      const aiUrl = '{{ route('bot.ask') }}';
+      const aiResp = await fetch(aiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+        body: JSON.stringify({ q: t })
+      });
+      if (aiResp.ok) {
+        const j = await aiResp.json();
+        if (j && j.answer) addMsg(j.answer, 'bf-bot');
+        else addMsg('No obtuve respuesta. Inténtalo de nuevo con otra redacción.', 'bf-bot');
+      } else {
+        addMsg('El servicio de IA no está disponible en este momento.', 'bf-bot');
+      }
+    } catch(e) {
+      addMsg('Ocurrió un error al procesar tu consulta.', 'bf-bot');
+    }
   }
   function answer(q){ return ''; }
 })();

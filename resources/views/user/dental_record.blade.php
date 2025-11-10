@@ -15,6 +15,9 @@
     .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid #c7d2fe;background:white;color:#111827;text-decoration:none;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--blue);color:white;border-color:#93c5fd}
     .btn.success{background:var(--ok);color:white;border-color:#86efac}
+    /* Back icon */
+    .icon-back{display:inline-block;width:16px;height:16px;vertical-align:-2px;margin-right:6px}
+    .icon-back svg{width:100%;height:100%;display:block}
     .muted{color:var(--muted)}
     .profile{display:flex;gap:14px;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:linear-gradient(180deg,#fff,#f8fafc)}
     .avatar{width:52px;height:52px;border-radius:999px;background:linear-gradient(135deg,#1d4ed8,#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-weight:800}
@@ -46,7 +49,7 @@
   <div class="top">
     <div><strong>FRADADI</strong> · Ficha odontológica</div>
     <div>
-      <a class="btn" href="{{ route('patients.history', ['key' => $key]) }}">← Historial clínico</a>
+      <a class="btn" href="{{ route('patients.history', ['key' => $key]) }}"><span class="icon-back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Historial clínico</a>
       <a class="btn" href="{{ route('appointments.registry') }}">Registro</a>
     </div>
   </div>

@@ -23,17 +23,28 @@
     .p-illus { position:absolute; right:-8px; bottom:-8px; width:90px; opacity:0.15; }
     .p-title { font-weight:700; }
     .p-sub { font-size:12px; color:#64748b; }
+    /* Back icon */
+    .icon-back { display:inline-block; width:12px; height:12px; vertical-align:-1px; margin-right:6px; }
+    .icon-back svg { width:100%; height:100%; display:block; }
+    /* Pagination chevrons */
+    nav[role="navigation"] svg { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+    ul.pagination svg { width:14px; height:14px; }
+    a > svg { width:14px; height:14px; vertical-align:-2px; }
+    table svg { width:14px; height:14px; }
+    /* Page-wide clamp to avoid any rogue huge SVGs on registry */
+    .page-registry svg { width:16px !important; height:16px !important; display:inline-block; }
+    .page-registry .icon-back svg { width:12px !important; height:12px !important; }
     /* Modal */
     .modal { position:fixed; inset:0; background:rgba(2,6,23,0.7); display:none; align-items:center; justify-content:center; z-index:1000; }
     .modal.show { display:flex; }
     .mcard { background:white; width:100%; max-width:560px; border-radius:12px; border:1px solid #e5e7eb; padding:16px; }
   </style>
 </head>
-<body>
+<body class="page-registry">
   <div class="top">
     <div><strong>FRADADI</strong> · Registro de pacientes</div>
     <div>
-      <a class="btn" href="{{ route('dashboard') }}">← Volver al panel</a>
+      <a class="btn" href="{{ route('dashboard') }}"><span class="icon-back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Volver al panel</a>
     </div>
   </div>
 
@@ -63,6 +74,9 @@
     </div>
     <div class="card">
       <h3 style="margin:0 0 8px;">Próximas citas</h3>
+      <div style="text-align:right; margin-bottom:6px;">
+        <a class="btn" href="{{ route('appointments.export') }}">Exportar CSV</a>
+      </div>
       @if($upcoming->isEmpty())
         <p class="muted">No hay próximas citas.</p>
       @else
@@ -102,6 +116,9 @@
 
     <div class="card">
       <h3 style="margin:0 0 8px;">Citas pasadas</h3>
+      <div style="text-align:right; margin-bottom:6px;">
+        <a class="btn" href="{{ route('appointments.export') }}">Exportar CSV</a>
+      </div>
       @if($past->isEmpty())
         <p class="muted">No hay citas pasadas.</p>
       @else

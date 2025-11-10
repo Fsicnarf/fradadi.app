@@ -11,6 +11,9 @@
     .wrap {max-width:1100px; margin:24px auto;}
     .card {background:white; border:1px solid #e5e7eb; border-radius:12px; padding:16px; margin-bottom:16px;}
     .muted { color:#64748b; }
+    /* Back icon */
+    .icon-back { display:inline-block; width:16px; height:16px; vertical-align:-2px; margin-right:6px; }
+    .icon-back svg { width:100%; height:100%; display:block; }
     .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
     @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
@@ -85,7 +88,7 @@
   <div class="top">
     <div><strong>FRADADI</strong> · Historial clínico</div>
     <div>
-      <a class="btn" href="{{ route('appointments.registry') }}">← Volver al registro</a>
+      <a class="btn" href="{{ route('appointments.registry') }}"><span class="icon-back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Volver al registro</a>
     </div>
   </div>
   @if(session('ok'))
@@ -394,7 +397,9 @@
       if (closeBtn) closeBtn.addEventListener('click', closeViewer);
     });
   </script>
-  <a href="{{ route('appointments.registry') }}" class="fab-back" title="Volver al registro" aria-label="Volver al registro">←</a>
+  <a href="{{ route('appointments.registry') }}" class="fab-back" title="Volver al registro" aria-label="Volver al registro">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
   <!-- Viewer overlay -->
   <div id="viewer" class="viewer" aria-modal="true" role="dialog" aria-hidden="true">
     <button class="close" title="Cerrar" aria-label="Cerrar">✕</button>

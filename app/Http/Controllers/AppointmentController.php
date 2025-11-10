@@ -233,4 +233,37 @@ class AppointmentController extends Controller
             return response()->json(['granularity' => 'month', 'labels' => $labels, 'values' => $values]);
         }
     }
+
+    public function exportCsv(Request $request)
+    {
+        $filename = 'appointments_' . now()->format('Ymd_His') . '.csv';
+        $columns = ['Fecha', 'Hora', 'DNI', 'Nombre', 'Edad', 'Tipo', 'Canal', 'Notas', 'Registrado por'];
+        $callback = function() use ($columns) {
+            $out = fopen('php://output', 'w');
+            // Header
+            fputcsv($out, $columns);
+            // Data
+            Appointment::with('user')->orderBy('start_at', 'desc')->chunk(500, function($chunk) use ($out) {
+                foreach ($chunk as $a) {
+                    $date = optional($a->start_at)->format('Y-m-d');
+                    $time = optional($a->start_at)->format('H:i');
+                    fputcsv($out, [
+                        $date,
+                        $time,
+                        (string)($a->dni ?? ''),
+                        (string)($a->patient_name ?? ''),
+                        (string)($a->patient_age ?? ''),
+                        (string)($a->appointment_type ?? ''),
+                        (string)($a->channel ?? ''),
+                        (string)($a->notes ?? ''),
+                        optional($a->user)->name ?? '',
+                    ]);
+                }
+            });
+            fclose($out);
+        };
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

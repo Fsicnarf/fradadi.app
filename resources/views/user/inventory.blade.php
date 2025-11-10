@@ -31,13 +31,24 @@
     .chip:hover { transform: translateY(-1px); }
     .card { transition: box-shadow .2s ease; }
     .card:hover { box-shadow: 0 10px 24px rgba(2,6,23,.08); }
+    /* Back icon */
+    .icon-back { display:inline-block; width:12px; height:12px; vertical-align:-1px; margin-right:6px; }
+    .icon-back svg { width:100%; height:100%; display:block; }
+    /* Clamp common SVGs (pagination, links) to avoid huge icons */
+    nav[role="navigation"] svg { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+    ul.pagination svg { width:14px; height:14px; }
+    a > svg { width:14px; height:14px; vertical-align:-2px; }
+    table svg { width:14px; height:14px; }
+    /* Page-wide safeguard */
+    .page-inventory svg { width:16px !important; height:16px !important; display:inline-block; }
+    .page-inventory .icon-back svg { width:12px !important; height:12px !important; }
   </style>
 </head>
-<body>
+<body class="page-inventory">
   <div class="top">
     <div><strong>FRADADI</strong> · Inventariado</div>
     <div>
-      <a class="btn" href="{{ route('dashboard') }}">← Volver al panel</a>
+      <a class="btn" href="{{ route('dashboard') }}"><span class="icon-back" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Volver al panel</a>
     </div>
   </div>
 
@@ -123,6 +134,9 @@
 
     <div class="card">
       <h3 style="margin:0 0 8px;">Materiales</h3>
+      <div style="text-align:right; margin-bottom:6px;">
+        <a class="btn" href="{{ route('materials.export') }}">Exportar CSV</a>
+      </div>
       <div class="toolbar">
         <form id="filterForm" method="GET" action="{{ route('materials.index') }}" style="display:flex; gap:8px; width:100%; align-items:center; flex-wrap:wrap;">
           <input type="text" name="q" value="{{ $q ?? '' }}" placeholder="Buscar por nombre, categoría o nota" style="flex:1; min-width:220px;" />

@@ -159,4 +159,32 @@ class MaterialController extends Controller
             return response()->json(['granularity'=>'month','labels'=>$labels,'values'=>$values]);
         }
     }
+
+    public function exportCsv(Request $request)
+    {
+        $filename = 'materials_' . now()->format('Ymd_His') . '.csv';
+        $columns = ['Nombre','Categoría','Cantidad','Mínimo','Unidad','Notas','Registrado por','Creado'];
+        $callback = function() use ($columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+            Material::with('user')->orderBy('created_at','desc')->chunk(500, function($chunk) use ($out) {
+                foreach ($chunk as $m) {
+                    fputcsv($out, [
+                        (string)$m->name,
+                        (string)($m->category ?? ''),
+                        (string)($m->quantity ?? 0),
+                        (string)($m->min_quantity ?? 0),
+                        (string)($m->unit ?? ''),
+                        (string)($m->notes ?? ''),
+                        optional($m->user)->name ?? '',
+                        optional($m->created_at)->format('Y-m-d H:i'),
+                    ]);
+                }
+            });
+            fclose($out);
+        };
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

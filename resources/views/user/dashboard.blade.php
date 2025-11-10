@@ -62,7 +62,7 @@
   <div class="modal" id="modal">
     <div class="card">
       <h3 style="margin:0 0 8px;">Nueva cita</h3>
-      <form id="apptForm">
+      <form id="apptForm" novalidate>
         @csrf
         <div class="grid">
           <div>
@@ -87,11 +87,11 @@
           </div>
           <div>
             <label>Fecha</label>
-            <input type="date" name="date" id="date" required>
+            <input type="date" name="date" id="date">
           </div>
           <div>
             <label>Hora</label>
-            <input type="time" name="time" id="time" required>
+            <input type="time" name="time" id="time">
           </div>
           <div>
             <label>Tipo de cita</label>
@@ -272,33 +272,36 @@
       let editingId = null;
 
       function openModal(dateStr) {
-        // Si la fecha es pasada (por seguridad)
-        const d = new Date(dateStr);
-        const min = new Date(todayStr + 'T00:00:00');
-        if (d < min) return;
-        dateInput.value = dateStr.slice(0,10);
-        timeInput.value = '09:00';
-        // Default channel to SMS
-        const channelSel = document.getElementById('channel');
-        if (channelSel) channelSel.value = 'SMS';
-        if (phoneInput) phoneInput.value = '';
-        if (dniInput) dniInput.value = '';
-        if (firstNameInput) firstNameInput.value = '';
-        if (lastNameInput) lastNameInput.value = '';
-        if (ageInput) ageInput.value = '';
-        modal.classList.add('show');
-        editingId = null;
-        document.body.classList.add('modal-open');
+        try {
+          if (!modal || !dateInput || !timeInput) return;
+          // Si la fecha es pasada (por seguridad)
+          const d = new Date(dateStr);
+          const min = new Date(todayStr + 'T00:00:00');
+          if (d < min) return;
+          dateInput.value = dateStr.slice(0,10);
+          timeInput.value = '09:00';
+          // Default channel to SMS
+          const channelSel = document.getElementById('channel');
+          if (channelSel) channelSel.value = 'SMS';
+          if (phoneInput) phoneInput.value = '';
+          if (dniInput) dniInput.value = '';
+          if (firstNameInput) firstNameInput.value = '';
+          if (lastNameInput) lastNameInput.value = '';
+          if (ageInput) ageInput.value = '';
+          modal.classList.add('show');
+          editingId = null;
+          document.body.classList.add('modal-open');
+        } catch(_) {}
       }
-      function closeModal() { modal.classList.remove('show'); document.body.classList.remove('modal-open'); }
-      cancelBtn.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      function closeModal() { if (!modal) return; modal.classList.remove('show'); document.body.classList.remove('modal-open'); }
+      if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+      if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
       // Evitar que los clics dentro de la tarjeta se propaguen al backdrop
-      modal.querySelector('.card').addEventListener('click', (e) => e.stopPropagation());
+      if (modal && modal.querySelector('.card')) modal.querySelector('.card').addEventListener('click', (e) => e.stopPropagation());
 
       // Eliminado: autorrelleno por DNI y llamadas a API.
 
-      form.addEventListener('submit', async (e) => {
+      if (form) form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = Object.fromEntries(new FormData(form).entries());
         try {
@@ -367,7 +370,8 @@
           deleteBtn.style.color = 'white';
           deleteBtn.type = 'button';
           deleteBtn.textContent = 'Eliminar';
-          form.querySelector('.actions').prepend(deleteBtn);
+          const actions = form ? form.querySelector('.actions') : null;
+          if (actions) actions.prepend(deleteBtn);
           deleteBtn.addEventListener('click', async () => {
             if (!editingId) return;
             if (!confirm('¿Eliminar esta cita?')) return;

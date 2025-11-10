@@ -25,5 +25,20 @@ class DatabaseSeeder extends Seeder
                 'approved' => true,
             ]
         );
+        // Usuario operador: mortegas
+        User::updateOrCreate(
+            ['username' => 'mortegas'],
+            [
+                'name' => 'Mortegas',
+                'email' => null,
+                'password' => Hash::make('fradadi123'),
+                'role' => 'user',
+                'approved' => true,
+            ]
+        );
+        // Seed sample appointments with patient data
+        $this->call(AppointmentSeeder::class);
+        // Seed initial inventory materials
+        $this->call(MaterialSeeder::class);
     }
 }

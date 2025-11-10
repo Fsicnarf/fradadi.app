@@ -40,12 +40,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/appointments/events', [AppointmentController::class, 'events'])->name('appointments.events');
     Route::get('/appointments/registry', [AppointmentController::class, 'registry'])->name('appointments.registry');
     Route::get('/appointments/stats', [AppointmentController::class, 'stats'])->name('appointments.stats');
+    Route::get('/appointments/export', [AppointmentController::class, 'exportCsv'])->name('appointments.export');
     Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
     Route::post('/appointments/{appointment}/update', [AppointmentController::class, 'update'])->name('appointments.update');
     Route::post('/appointments/{appointment}/delete', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
 
     // Materials inventory
     Route::get('/inventory', [MaterialController::class, 'index'])->name('materials.index');
+    Route::get('/inventory/export', [MaterialController::class, 'exportCsv'])->name('materials.export');
     Route::post('/inventory', [MaterialController::class, 'store'])->name('materials.store');
     Route::get('/inventory/low-count', [MaterialController::class, 'lowCount'])->name('materials.low');
     Route::get('/inventory/stats', [MaterialController::class, 'stats'])->name('materials.stats');
@@ -74,6 +76,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/bot/search', [\App\Http\Controllers\BotKnowledgeController::class, 'search'])->name('bot.search');
     // Bot topics endpoint for many suggested titles from PDFs
     Route::get('/bot/topics', [\App\Http\Controllers\BotKnowledgeController::class, 'topics'])->name('bot.topics');
+    // Bot AI answer endpoint
+    Route::post('/bot/ask', [\App\Http\Controllers\BotAiController::class, 'ask'])->name('bot.ask');
 });
-
-
