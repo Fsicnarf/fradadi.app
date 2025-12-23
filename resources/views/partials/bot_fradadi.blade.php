@@ -522,13 +522,7 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
         body: JSON.stringify({ q: t })
       });
-      if (aiResp.ok) {
-        const j = await aiResp.json();
-        if (j && j.answer) addMsg(j.answer, 'bf-bot');
-        else addMsg('No obtuve respuesta. Inténtalo de nuevo con otra redacción.', 'bf-bot');
-      } else {
-        addMsg('El servicio de IA no está disponible en este momento.', 'bf-bot');
-      }
+      
     } catch(e) {
       addMsg('Ocurrió un error al procesar tu consulta.', 'bf-bot');
     }
